@@ -1,0 +1,85 @@
+version: '3.9'
+name: loanlens
+
+services:
+  mysql:
+    image: mysql:8.3
+    container_name: loanlens-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: loanlens
+      MYSQL_USER: loanlens
+      MYSQL_PASSWORD: loanlens_pass
+    ports: ["3306:3306"]
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "loanlens", "-ploanlens_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: loanlens-redis
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  backend:
+    build:
+      context: .
+      dockerfile: devops/docker/Dockerfile.backend
+    container_name: loanlens-backend
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/loanlens?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USER: loanlens
+      DB_PASS: loanlens_pass
+      REDIS_HOST: redis
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-prod-minimum-32-chars}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+    ports: ["8080:8080"]
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: devops/docker/Dockerfile.frontend
+    container_name: loanlens-frontend
+    ports: ["3000:80"]
+    depends_on:
+      backend: { condition: service_healthy }
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: loanlens-prometheus
+    volumes:
+      - ./devops/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports: ["9090:9090"]
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=15d"]
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: loanlens-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASS:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports: ["3001:3000"]
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./devops/monitoring/grafana:/etc/grafana/provisioning
+
+volumes:
+  mysql_data:
+  grafana_data:

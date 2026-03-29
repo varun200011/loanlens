@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: loanlens-prod
+resources:
+  - ../../base
+configMapGenerator:
+  - name: loanlens-config
+    behavior: merge
+    literals:
+      - spring-profile=prod
+      - log-level=INFO

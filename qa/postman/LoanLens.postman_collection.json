@@ -1,0 +1,212 @@
+{
+  "info": {
+    "name": "LoanLens API",
+    "description": "Complete test suite for all LoanLens endpoints",
+    "_postman_id": "loanlens-collection-v1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "accessToken", "value": "" },
+    { "key": "loanId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.test('Has accessToken', () => pm.expect(pm.response.json().accessToken).to.be.a('string'));",
+            "pm.collectionVariables.set('accessToken', pm.response.json().accessToken);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"name\":\"Postman Test\",\"email\":\"postman_{{$timestamp}}@test.com\",\"password\":\"Test@1234\",\"monthlyIncome\":80000,\"monthlyExpenses\":25000}" }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('tokenType is Bearer', () => pm.expect(pm.response.json().tokenType).to.equal('Bearer'));",
+            "pm.collectionVariables.set('accessToken', pm.response.json().accessToken);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"demo@loanlens.app\",\"password\":\"Demo@1234\"}" }
+          }
+        },
+        {
+          "name": "Login — Wrong Password (401)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 401', () => pm.response.to.have.status(401));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"demo@loanlens.app\",\"password\":\"WrongPass\"}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Loans",
+      "item": [
+        {
+          "name": "Add Loan",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "pm.test('EMI is positive', () => pm.expect(pm.response.json().emi).to.be.above(0));",
+            "pm.collectionVariables.set('loanId', pm.response.json().id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/loans",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"loanType\":\"PERSONAL\",\"principal\":200000,\"interestRate\":12.5,\"tenureMonths\":24,\"startDate\":\"2024-01-01\",\"lenderName\":\"Test Lender\"}" }
+          }
+        },
+        {
+          "name": "Get All Loans",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/loans",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        },
+        {
+          "name": "Get Loans — No Auth (401)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 401', () => pm.response.to.have.status(401));"
+          ]}}],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/loans" }
+        }
+      ]
+    },
+    {
+      "name": "Portfolio",
+      "item": [
+        {
+          "name": "Get Portfolio Summary",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has dtiRatio', () => pm.expect(pm.response.json().dtiRatio).to.be.a('number'));",
+            "pm.test('Has healthGrade', () => pm.expect(['A+','A','B','C','D','F']).to.include(pm.response.json().healthGrade));",
+            "pm.test('dtiRatio >= 0', () => pm.expect(pm.response.json().dtiRatio).to.be.at.least(0));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/portfolio/summary",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stress",
+      "item": [
+        {
+          "name": "Simulate Income Drop",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has riskBand', () => pm.expect(['GREEN','AMBER','RED','CRITICAL']).to.include(pm.response.json().riskBand));",
+            "pm.test('Has recommendations', () => pm.expect(pm.response.json().recommendations).to.be.an('array'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/stress/simulate",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"scenarioType\":\"INCOME_DROP\",\"parameterDelta\":-30}" }
+          }
+        },
+        {
+          "name": "Simulate Rate Hike",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const r = pm.response.json();",
+            "pm.test('Projected EMI >= Current EMI', () => pm.expect(r.projectedMonthlyEmi).to.be.at.least(r.currentMonthlyEmi));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/stress/simulate",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"scenarioType\":\"RATE_HIKE\",\"parameterDelta\":2}" }
+          }
+        },
+        {
+          "name": "Simulate Job Loss",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Risk is CRITICAL', () => pm.expect(pm.response.json().riskBand).to.equal('CRITICAL'));",
+            "pm.test('isAtRisk is true', () => pm.expect(pm.response.json().isAtRisk).to.be.true);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/stress/simulate",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"scenarioType\":\"JOB_LOSS\",\"parameterDelta\":100}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Affordability",
+      "item": [
+        {
+          "name": "Get Affordability Score",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Score 0-100', () => { const s = pm.response.json().score; pm.expect(s).to.be.at.least(0); pm.expect(s).to.be.at.most(100); });",
+            "pm.test('safeBorrowLimit >= 0', () => pm.expect(pm.response.json().safeBorrowLimit).to.be.at.least(0));"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/affordability/score",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Generate Report",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has signedUrl', () => pm.expect(pm.response.json().signedUrl).to.be.a('string'));",
+            "pm.test('Has healthGrade', () => pm.expect(pm.response.json().healthGrade).to.be.a('string'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/reports/generate",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }]
+          }
+        }
+      ]
+    }
+  ]
+}

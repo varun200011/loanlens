@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:tc:mysql:8.3:///loanlens_test?TC_REUSABLE=true
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  flyway:
+    enabled: false
+
+app:
+  jwt:
+    secret: test-jwt-secret-for-unit-tests-32ch
+    access-token-expiry-ms: 3600000
+
+logging:
+  level:
+    com.loanlens: DEBUG

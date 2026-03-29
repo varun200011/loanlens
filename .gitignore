@@ -1,0 +1,51 @@
+# ─── Java / Maven ───────────────────────────────────────────────────────
+target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ─── Node / React ───────────────────────────────────────────────────────
+node_modules/
+dist/
+.vite/
+*.local
+
+# ─── Environment / Secrets ──────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*secret*
+!.env.example
+
+# ─── IDE ────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ─── OS ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Test output ────────────────────────────────────────────────────────
+qa/reports/playwright-html/
+qa/reports/playwright-results.json
+qa/reports/*.pdf
+coverage/
+
+# ─── Docker volumes ─────────────────────────────────────────────────────
+mysql_data/
+grafana_data/
+
+# ─── Generated reports ──────────────────────────────────────────────────
+/tmp/loanlens-reports/
+*.pdf

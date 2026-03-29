@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loanlens-frontend
+  namespace: loanlens-prod
+  labels: { app: loanlens, component: frontend }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: loanlens, component: frontend }
+  template:
+    metadata:
+      labels: { app: loanlens, component: frontend }
+    spec:
+      containers:
+        - name: loanlens-frontend
+          image: FRONTEND_IMAGE_PLACEHOLDER
+          ports: [{ containerPort: 80 }]
+          resources:
+            requests: { memory: 64Mi, cpu: 50m }
+            limits:  { memory: 128Mi, cpu: 200m }
+          readinessProbe:
+            httpGet: { path: /health, port: 80 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loanlens-frontend
+  namespace: loanlens-prod
+spec:
+  selector: { app: loanlens, component: frontend }
+  ports: [{ port: 80, targetPort: 80 }]
+  type: LoadBalancer
